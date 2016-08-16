@@ -21,9 +21,11 @@ QT          +=  core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport
 
-QWT_ROOT = /media/Datos/Programas/libqwt6
+QWT_ROOT = /opt/include/qwt-6.1.3
 
-include ( $$QWT_ROOT/features/qwt.prf )
+include ( /usr/lib64/qt5/mkspecs/features/qwt.prf )
+
+CONFIG += qwt
 
 win32 {
     CONFIG +=  serialport qwt
@@ -32,9 +34,8 @@ win32 {
 unix {
     LIBS +=  -lQt5SerialPort
     #LIBS += -lqwt
-    #INCLUDEPATH += /usr/include/qwt
+    INCLUDEPATH += /opt/include/qwt-6.1.3/src
 }
-
 TARGET      =   qSerialTerm
 TEMPLATE    =   app
 SOURCES     +=  main.cpp\
