@@ -25,6 +25,9 @@
 
 #include "slider.h"
 
+#include <CRC.h>
+#include <arrayFunctions.h>
+
 namespace Ui {
   class FrameWidget;
 }
@@ -67,7 +70,37 @@ class FrameWidget : public QWidget
 
     void on_refreshRateTimer_timeout();
 
-  private:
+    void on_WriteEnable_clicked();
+
+    void on_BridgeEnable_clicked();
+
+    void on_ZeroPosition_clicked();
+
+    void on_LegRadius_textChanged(const QString &arg1);
+
+    void on_LegAngle_textChanged(const QString &arg1);
+
+    void on_KillBridge_clicked();
+
+    void on_M1Angle_textChanged(const QString &arg1);
+
+    void on_M2Angle_textChanged(const QString &arg1);
+
+    void on_GainSetcomboBox_currentIndexChanged(int index);
+
+    void on_ManualPositioncheckBox_stateChanged(int arg1);
+
+    void on_ManualAnglecheckBox_stateChanged(int arg1);
+
+    void on_checkBox_toggled(bool checked);
+
+    void on_checkBox_2_toggled(bool checked);
+
+    void on_ControlCurrent_toggled(bool checked);
+
+    void on_ControlPosition_toggled(bool checked);
+
+private:
     Ui::FrameWidget *ui;
     QTimer *refreshRateTimer;
     QVector<Slider*> sliderVector;

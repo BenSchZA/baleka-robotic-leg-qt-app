@@ -51,7 +51,9 @@ SOURCES     +=  main.cpp\
     plot.cpp \
     plotwidget.cpp \
     circularbuffer.cpp \
-    imagewidget.cpp
+    imagewidget.cpp \
+    CRC.c \
+    arrayFunctions.c
 
 HEADERS     +=  mainwindow.h \
     aboutdialog.h \
@@ -65,7 +67,9 @@ HEADERS     +=  mainwindow.h \
     plot.h \
     plotwidget.h \
     circularbuffer.h \
-    imagewidget.h
+    imagewidget.h \
+    CRC.h \
+    arrayFunctions.h
 
 FORMS       +=  mainwindow.ui \
     aboutdialog.ui \

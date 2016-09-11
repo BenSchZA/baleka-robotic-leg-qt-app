@@ -21,6 +21,18 @@
 #include "ui_framewidget.h"
 
 #include "hexstring.h"
+#include <queue>
+using std::queue;
+
+queue<int> txQueue; /* Declare a queue */
+
+#define KILL 0
+#define WRITE 1
+#define BRIDGE 2
+#define CURRENT_SET 20
+#define POSITION_SET 22
+#define ZERO 8
+#define GAIN_SET 9
 
 FrameWidget::FrameWidget(QWidget *parent) :
   QWidget(parent),
@@ -46,6 +58,20 @@ FrameWidget::FrameWidget(QWidget *parent) :
   ui->formatComboBox->addItem(QLatin1String("Hex string"), Hexadecimal);
 
   ui->payloadSpinBox->setValue(4);
+
+  /////////////////////////////////////////////////////////////////
+
+  ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 0 (Leg)"), 0);
+  ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 1 (No Leg)"), 1);
+
+  ui->LegRadius->setValidator(new QIntValidator(10, 20));
+  ui->LegAngle->setValidator(new QIntValidator(-1, 1));
+  ui->M1Angle->setValidator(new QIntValidator(90, 162));
+  ui->M2Angle->setValidator(new QIntValidator(90, 162));
+
+  initCRC(0);
+
+  /////////////////////////////////////////////////////////////////
 }
 
 FrameWidget::~FrameWidget()
@@ -168,60 +194,205 @@ void FrameWidget::on_sendPushButton_clicked()
 
 void FrameWidget::on_refreshRateTimer_timeout()
 {
-  emit send(encode());
+//    if(ui->ControlCurrent->isChecked())
+//        //txQueue.push();
+    if(ui->ControlPosition->isChecked())
+        txQueue.push(POSITION_SET); //TODO make new opcode
+    emit send(encode());
 }
+
+struct __attribute__((__packed__)) TXPacketStruct {
+        uint8_t START[2];
+
+        uint8_t OPCODE;
+
+        uint8_t M1C[4];
+        uint8_t M2C[4];
+
+        uint8_t M1P[4];
+        uint8_t M2P[4];
+
+        uint8_t StatBIT_1 : 1;
+        uint8_t StatBIT_2 : 1;
+        uint8_t StatBIT_3 : 1;
+        uint8_t StatBIT_4 : 1;
+        uint8_t StatBIT_5 : 1;
+        uint8_t StatBIT_6 : 1;
+        uint8_t StatBIT_7 : 1;
+        uint8_t StatBIT_8 : 1;
+
+        uint8_t CRCCheck[2];
+
+        uint8_t STOP[2];
+};
+
+struct TXPacketStruct TXPacket;
+uint8_t *TXPacketPTR = (uint8_t*)&TXPacket;
+
+union {
+        int32_t WORD;
+        uint16_t HALFWORD;
+        uint8_t BYTE[4];
+} WORDtoBYTE;
+
+uint32_t CALC_CRC;
+
+float tempFloat = 0;
 
 QByteArray FrameWidget::encode()
 {
-  QByteArray frame;
+    TXPacket.START[0] = 0x7E;
+    TXPacket.START[1] = 0x5B;
 
-  QDataStream encoder(&frame, QIODevice::ReadWrite);
+    TXPacket.STOP[0] = 0x5D;
+    TXPacket.STOP[1] = 0x7E;
 
-  encoder.setByteOrder(QDataStream::ByteOrder(ui->endiannessComboBox->itemData(ui->endiannessComboBox->currentIndex()).value<int>()));
+    uint8_t *SendPacket;
 
-  switch(ui->dataTypeComboBox->itemData(ui->dataTypeComboBox->currentIndex()).value<int>()) {
-    case UINT8:
-      for (int i = 0; i < sliderVector.size(); i++)
-        encoder << quint8(sliderVector[i]->value());
-      break;
+    QByteArray frame;
 
-    case UINT16:
-      for (int i = 0; i < sliderVector.size(); i++)
-        encoder << quint16(sliderVector[i]->value());
-      break;
+    QDataStream encoder(&frame, QIODevice::ReadWrite);
 
-    case UINT32:
-      for (int i = 0; i < sliderVector.size(); i++)
-        encoder << quint32(sliderVector[i]->value());
-      break;
+    encoder.setByteOrder(QDataStream::ByteOrder(ui->endiannessComboBox->itemData(ui->endiannessComboBox->currentIndex()).value<int>()));
 
-    case INT8:
-      for (int i = 0; i < sliderVector.size(); i++)
-        encoder << qint8(sliderVector[i]->value());
-      break;
+    if(txQueue.size()>0){
+        switch(txQueue.front()){
+        case KILL:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case WRITE:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case BRIDGE:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case CURRENT_SET:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case POSITION_SET:
+            if(ui->ManualPositioncheckBox->isChecked()){
 
-    case INT16:
-      for (int i = 0; i < sliderVector.size(); i++)
-        encoder << qint16(sliderVector[i]->value());
-      break;
+                //TXPacket.M1P = ;
+                //TXPacket.M2P = ;
+            }
 
-    case INT32:
-      for (int i = 0; i < sliderVector.size(); i++)
-        encoder << qint32(sliderVector[i]->value());
-      break;
-  }
+            if(ui->ManualAnglecheckBox->isChecked()){
+                if(ui->M1Angle->hasAcceptableInput()){
+                    WORDtoBYTE.WORD = 250*(ui->M1Angle->text().toFloat()/180 - 1);
 
-  if (ui->formatComboBox->itemData(ui->formatComboBox->currentIndex()).value<int>() == Hexadecimal)
-    frame = HexString::fromRawBinary(frame);
+                    //Change Little-Endian
+                    TXPacket.M1P[0] = WORDtoBYTE.BYTE[0];
+                    TXPacket.M1P[1] = WORDtoBYTE.BYTE[1];
+                    TXPacket.M1P[2] = WORDtoBYTE.BYTE[2];
+                    TXPacket.M1P[3] = WORDtoBYTE.BYTE[3];
+                }
 
-  if (ui->prependLineEdit->hasAcceptableInput())
-    frame.insert(0, char(ui->prependLineEdit->text().toInt()));
+                if(ui->M2Angle->hasAcceptableInput()){
+                    WORDtoBYTE.WORD = 250*(1 - ui->M2Angle->text().toFloat()/180);
 
-  if(ui->appendLineEdit->hasAcceptableInput())
-    frame.append(char(ui->appendLineEdit->text().toInt()));
+                    //Change Little-Endian
+                    TXPacket.M2P[0] = WORDtoBYTE.BYTE[0];
+                    TXPacket.M2P[1] = WORDtoBYTE.BYTE[1];
+                    TXPacket.M2P[2] = WORDtoBYTE.BYTE[2];
+                    TXPacket.M2P[3] = WORDtoBYTE.BYTE[3];
+                }
+            }
 
-  return frame;
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case ZERO:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case GAIN_SET:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        default:
+            SendPacket = TXPacketPTR;
+        }
+        txQueue.pop();
+
+        CALC_CRC = crcCalc(&TXPacket.OPCODE, 0, 18, 0); //Check entire data CRC
+        WORDtoBYTE.HALFWORD = CALC_CRC;
+
+        TXPacket.CRCCheck[0] = WORDtoBYTE.BYTE[1];
+        TXPacket.CRCCheck[1] = WORDtoBYTE.BYTE[0];
+
+        for (int i = 0; i < sizeof(TXPacket); i++){
+            encoder << quint8(SendPacket[i]);
+        }
+    }
+
+    //frame.insert(3, 0x22);
+    //frame.insert(4, 0x22);
+
+    if (ui->formatComboBox->itemData(ui->formatComboBox->currentIndex()).value<int>() == Hexadecimal)
+        frame = HexString::fromRawBinary(frame);
+
+    return frame;
 }
+
+//QByteArray FrameWidget::encode()
+//{
+
+//  QByteArray frame;
+
+//  QDataStream encoder(&frame, QIODevice::ReadWrite);
+
+//  encoder.setByteOrder(QDataStream::ByteOrder(ui->endiannessComboBox->itemData(ui->endiannessComboBox->currentIndex()).value<int>()));
+
+//  switch(ui->dataTypeComboBox->itemData(ui->dataTypeComboBox->currentIndex()).value<int>()) {
+//    case UINT8:
+//      for (int i = 0; i < sliderVector.size(); i++)
+//        encoder << quint8(sliderVector[i]->value());
+//
+//      break;
+
+//    case UINT16:
+//      for (int i = 0; i < sliderVector.size(); i++)
+//        encoder << quint16(sliderVector[i]->value());
+//      break;
+
+//    case UINT32:
+//      for (int i = 0; i < sliderVector.size(); i++)
+//        encoder << quint32(sliderVector[i]->value());
+//      break;
+
+//    case INT8:
+//      for (int i = 0; i < sliderVector.size(); i++)
+//        encoder << qint8(sliderVector[i]->value());
+//      break;
+
+//    case INT16:
+//      for (int i = 0; i < sliderVector.size(); i++)
+//        encoder << qint16(sliderVector[i]->value());
+//      break;
+
+//    case INT32:
+//      for (int i = 0; i < sliderVector.size(); i++)
+//        encoder << qint32(sliderVector[i]->value());
+//      break;
+//  }
+
+//  if (ui->formatComboBox->itemData(ui->formatComboBox->currentIndex()).value<int>() == Hexadecimal)
+//    frame = HexString::fromRawBinary(frame);
+
+//  if (ui->prependLineEdit->hasAcceptableInput())
+//    //frame.insert(0, char(ui->prependLineEdit->text().toInt()));
+//      frame.insert(0, 0xA5);
+
+//  if(ui->appendLineEdit->hasAcceptableInput())
+//    //frame.append(char(ui->appendLineEdit->text().toInt()));
+//      frame.insert(1, 0xFF);
+
+//  return frame;
+//}
 
 void FrameWidget::enableSettings()
 {
@@ -248,4 +419,91 @@ void FrameWidget::disableSettings()
   ui->payloadSpinBox->setDisabled(true);
   ui->refreshRateValueSpinBox->setDisabled(true);
   ui->continuousCheckBox->setDisabled(true);
+}
+
+void FrameWidget::on_WriteEnable_clicked()
+{
+    txQueue.push(WRITE);
+}
+
+void FrameWidget::on_ZeroPosition_clicked()
+{
+    txQueue.push(ZERO);
+}
+
+void FrameWidget::on_LegRadius_textChanged(const QString &arg1)
+{
+    if(ui->ManualPositioncheckBox->isChecked())
+        if(ui->LegRadius->hasAcceptableInput())
+            txQueue.push(POSITION_SET);
+
+}
+
+void FrameWidget::on_LegAngle_textChanged(const QString &arg1)
+{
+    if(ui->ManualPositioncheckBox->isChecked())
+        if(ui->LegAngle->hasAcceptableInput())
+            txQueue.push(POSITION_SET);
+}
+
+void FrameWidget::on_BridgeEnable_clicked()
+{
+    txQueue.push(BRIDGE);
+}
+
+void FrameWidget::on_KillBridge_clicked()
+{
+    txQueue.push(KILL);
+}
+
+void FrameWidget::on_M1Angle_textChanged(const QString &arg1)
+{
+    if(ui->ManualAnglecheckBox->isChecked())
+        if(ui->M1Angle->hasAcceptableInput())
+            txQueue.push(POSITION_SET);
+}
+
+void FrameWidget::on_M2Angle_textChanged(const QString &arg1)
+{
+    if(ui->ManualAnglecheckBox->isChecked())
+        if(ui->M2Angle->hasAcceptableInput())
+            txQueue.push(POSITION_SET);
+}
+
+void FrameWidget::on_GainSetcomboBox_currentIndexChanged(int index)
+{
+    TXPacket.StatBIT_1 = ui->GainSetcomboBox->itemData(index).value<int>();
+    txQueue.push(GAIN_SET);
+}
+
+void FrameWidget::on_ManualPositioncheckBox_stateChanged(int arg1)
+{
+    if(ui->ManualPositioncheckBox->isChecked())
+        ui->ManualAnglecheckBox->setDisabled(true);
+    else
+        ui->ManualAnglecheckBox->setEnabled(true);
+}
+
+void FrameWidget::on_ManualAnglecheckBox_stateChanged(int arg1)
+{
+    if(ui->ManualAnglecheckBox->isChecked())
+        ui->ManualPositioncheckBox->setDisabled(true);
+    else
+        ui->ManualPositioncheckBox->setEnabled(true);
+}
+
+void FrameWidget::on_ControlCurrent_toggled(bool checked)
+{
+    if(checked)
+        ui->ControlPosition->setDisabled(true);
+    else
+        ui->ControlPosition->setEnabled(true);
+}
+
+void FrameWidget::on_ControlPosition_toggled(bool checked)
+{
+    if(checked)
+        ui->ControlCurrent->setDisabled(true);
+    else
+        ui->ControlCurrent->setEnabled(true);
 }

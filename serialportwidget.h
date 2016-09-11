@@ -27,6 +27,9 @@
 
 #include <QTimer>
 
+#include <CRC.h>
+#include <arrayFunctions.h>
+
 namespace Ui {
   class SerialPortWidget;
 }
@@ -60,7 +63,9 @@ class SerialPortWidget : public QWidget
 
     void on_refreshRateTimer_timeout();
 
-  private:
+    void on_pushButton_clicked();
+
+private:
     void enableCommunicationSettings();
     void disableCommunicationSettings();
     void validateCommunicationSettings();

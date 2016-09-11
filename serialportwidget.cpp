@@ -127,6 +127,7 @@ void SerialPortWidget::on_openPortPushButton_clicked()
     ui->stopBitsComboBox->setCurrentIndex(-1);
     ui->parityComboBox->setCurrentIndex(-1);
     ui->flowControlComboBox->setCurrentIndex(-1);
+
   } else {
     serialPort = new QSerialPort(ui->portComboBox->currentText());
 
@@ -318,9 +319,66 @@ void SerialPortWidget::on_flowControlComboBox_currentIndexChanged(int index)
   ui->startCommunicationPushButton->setDisabled(true);
 }
 
+struct __attribute__((__packed__)) TXPacketStruct {
+                uint8_t START[2];
+
+                uint8_t LENGTH;
+
+                uint8_t M1C[2];
+                uint8_t M1P[4];
+                uint8_t M1V[4];
+
+                uint8_t M2C[2];
+                uint8_t M2P[4];
+                uint8_t M2V[4];
+
+                uint8_t ACCX[2];
+                uint8_t ACCY[2];
+                uint8_t ACCZ[2];
+                uint8_t GYRX[2];
+                uint8_t GYRY[2];
+                uint8_t GYRZ[2];
+                uint8_t TEMP;
+                uint8_t StatBIT_1 : 1;
+                uint8_t StatBIT_2 : 1;
+                uint8_t StatBIT_3 : 1;
+                uint8_t StatBIT_4 : 1;
+                uint8_t StatBIT_5 : 1;
+                uint8_t StatBIT_6 : 1;
+                uint8_t StatBIT_7 : 1;
+                uint8_t StatBIT_8 : 1;
+
+                uint8_t CRCCheck;
+
+                uint8_t STOP[2];
+        };
+
+        struct TXPacketStruct PCPacket;
+        //Transmit pointer PCPacketPTR with sizeof(PCPacket)
+        uint8_t *PCPacketPTR = (uint8_t*)&PCPacket;
+
+QByteArray RXBuffer;
+uint8_t INDEX[4];
+
 void SerialPortWidget::on_refreshRateTimer_timeout()
 {
-  emit read(serialPort->readAll());
+    PCPacket.START[0] = 0x7E;
+    PCPacket.START[1] = 0x5B;
+
+    PCPacket.STOP[0] = 0x5B;
+    PCPacket.STOP[1] = 0x7E;
+
+  RXBuffer = serialPort->readAll();
+
+  if(RXBuffer.count()>0)
+    RXBuffer.append("\n");
+
+  emit read(RXBuffer);
+
+//  if(INDEX = findBytes(RXBuffer, RXBuffer.count(), PCPacket.START, 2, 1)>0)
+//    memcpy(PCPacketPTR, &RXBuffer[INDEX], 40);
+//    emit read(PCPacket.STOP);
+
 }
 
 void SerialPortWidget::enableCommunicationSettings()
@@ -353,4 +411,19 @@ void SerialPortWidget::validateCommunicationSettings(void)
   } else {
     ui->startCommunicationPushButton->setDisabled(true);
   }
+}
+
+void SerialPortWidget::on_pushButton_clicked()
+{
+    //Set defaults
+    ui->baudRateComboBox->setCurrentIndex(16);
+    ui->baudRateComboBox->update();
+    ui->dataBitsComboBox->setCurrentIndex(3);
+    ui->dataBitsComboBox->update();
+    ui->stopBitsComboBox->setCurrentIndex(0);
+    ui->stopBitsComboBox->update();
+    ui->parityComboBox->setCurrentIndex(0);
+    ui->parityComboBox->update();
+    ui->flowControlComboBox->setCurrentIndex(0);
+    ui->flowControlComboBox->update();
 }
