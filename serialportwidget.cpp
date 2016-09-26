@@ -22,7 +22,21 @@
 
 #include <QMessageBox>
 
-#define REFRESH_RATE_MS 40
+#include <QTextStream>
+#include <QString>
+#include <QFile>
+
+#include <iostream>
+#include <fstream>
+using std::ofstream;
+using std::pow;
+
+//Kinematics: SI Units and Degrees
+float *ForwardKinematics(float phi1, float phi2);
+float *InverseKinematics(float r, float theta);
+#define PI 3.141592653f
+
+#define REFRESH_RATE_MS 5
 
 Q_DECLARE_METATYPE(QSerialPort::DataBits)
 Q_DECLARE_METATYPE(QSerialPort::StopBits)
@@ -78,6 +92,14 @@ SerialPortWidget::SerialPortWidget(QWidget *parent) :
   ui->flowControlComboBox->addItem(QLatin1String("Software"),
                                    QSerialPort::SoftwareControl);
   ui->flowControlComboBox->setCurrentIndex(-1);
+
+  /////////////////////////////////////////////////////////////////
+  //Baleka Code
+
+  initCRC(0);
+
+  /////////////////////////////////////////////////////////////////
+
 }
 
 SerialPortWidget::~SerialPortWidget()
@@ -319,10 +341,11 @@ void SerialPortWidget::on_flowControlComboBox_currentIndexChanged(int index)
   ui->startCommunicationPushButton->setDisabled(true);
 }
 
+/////////////////////////////////////////////////////////////////
+//Baleka Code
+
 struct __attribute__((__packed__)) TXPacketStruct {
                 uint8_t START[2];
-
-                uint8_t LENGTH;
 
                 uint8_t M1C[2];
                 uint8_t M1P[4];
@@ -348,7 +371,7 @@ struct __attribute__((__packed__)) TXPacketStruct {
                 uint8_t StatBIT_7 : 1;
                 uint8_t StatBIT_8 : 1;
 
-                uint8_t CRCCheck;
+                uint8_t CRCCheck[2];
 
                 uint8_t STOP[2];
         };
@@ -357,29 +380,190 @@ struct __attribute__((__packed__)) TXPacketStruct {
         //Transmit pointer PCPacketPTR with sizeof(PCPacket)
         uint8_t *PCPacketPTR = (uint8_t*)&PCPacket;
 
+        union {
+                uint32_t WORD;
+                uint16_t HALFWORD;
+                uint8_t BYTE[4];
+        } WORDtoBYTE;
+
+        union {
+                float FLOAT;
+                int32_t FLOAT32;
+                int16_t FLOAT16;
+                uint8_t BYTE[4];
+        } FLOATtoBYTE;
+
 QByteArray RXBuffer;
-uint8_t INDEX[4];
+QByteArray PlotBuffer;
+char *RXBufferArray;
+uint8_t RXBufferSize;
+int8_t INDEX;
+uint32_t CALC_CRC_2;
+
+uint8_t run = 0;
+ofstream *CSVlogPTR;
+
+QStringList CSVList;
+QString CSVLog;
+
+QString M1C;
+QString M1P;
+QString M1V;
+
+QString M2C;
+QString M2P;
+QString M2V;
+
+uint32_t test = 100;
+
 
 void SerialPortWidget::on_refreshRateTimer_timeout()
 {
     PCPacket.START[0] = 0x7E;
     PCPacket.START[1] = 0x5B;
 
-    PCPacket.STOP[0] = 0x5B;
-    PCPacket.STOP[1] = 0x7E;
+//    PCPacket.STOP[0] = 0x5D;
+//    PCPacket.STOP[1] = 0x7E;
 
   RXBuffer = serialPort->readAll();
 
-  if(RXBuffer.count()>0)
-    RXBuffer.append("\n");
+  RXBufferArray = RXBuffer.data();
 
-  emit read(RXBuffer);
+  if(findBytes((uint8_t*)RXBufferArray, RXBuffer.size(), PCPacket.START, 2, 1)>=0){
+      INDEX = findBytes((uint8_t*)RXBufferArray, RXBuffer.size(), PCPacket.START, 2, 1);
 
-//  if(INDEX = findBytes(RXBuffer, RXBuffer.count(), PCPacket.START, 2, 1)>0)
-//    memcpy(PCPacketPTR, &RXBuffer[INDEX], 40);
-//    emit read(PCPacket.STOP);
+      memcpy(PCPacketPTR, &RXBufferArray[INDEX], sizeof(PCPacket));
+
+      WORDtoBYTE.BYTE[1] = PCPacket.CRCCheck[0];
+      WORDtoBYTE.BYTE[0] = PCPacket.CRCCheck[1];
+
+      CALC_CRC_2 = crcCalc(PCPacketPTR, 2, 34, 0); //Check entire data CRC
+
+//      if(WORDtoBYTE.HALFWORD==CALC_CRC_2) {
+//        run = 1;
+//      }
+  }
+
+//  count1 = 4*250*(phi1/180 - 1);
+//  phi1 = (count1/(4*250) + 1)*180;
+
+//  count2 = 4*250*(1 - phi2/180);
+//  phi2 = (count2/(4*250) - 1)*(-180);
+
+  //Temporary without CRC check
+  if(PCPacket.STOP[0] == 0x5D){
+
+      memcpy(FLOATtoBYTE.BYTE, PCPacket.M1C, 2);
+      FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT16/(pow(2.0,13)/60.0);
+      M1C = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, PCPacket.M1P, 4);
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(4*250.0) + 1)*180.0;
+      M1P = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, PCPacket.M1V, 4);
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(pow(2.0,17)/20000.0))*(1/8000.0)*60.0;
+      M1V = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, PCPacket.M2C, 2);
+      FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT16/(pow(2.0,13)/60.0);
+      M2C = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, PCPacket.M2P, 4);
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(4*250.0) - 1)*(-180.0);
+      M2P = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, PCPacket.M2V, 4);
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(pow(2.0,17)/20000.0))*(1/8000.0)*60.0;
+      M2V = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      CSVList.clear();
+
+        if(run==0){
+            CSVList << "M1C" << "M1P" << "M1V" << "M2C" << "M2P" << "M2V";
+            run=1;
+        }
+        else{
+            CSVList << M1C << M1P << M1V << M2C << M2P << M2V;
+        }
+
+
+      CSVLog = CSVList.join(',');
+      CSVLog.append("\n");
+
+      emit read(CSVLog.toStdString().c_str());
+
+      emit readPlot(PlotBuffer);
+      PlotBuffer.clear();
+  }
 
 }
+
+float *ForwardKinematics(float phi1, float phi2){
+  //function [r,theta] = fcn(phi1,phi2)
+
+  uint8_t valid = 1;
+  static float ret[2];
+
+  phi1 = (phi1*2*PI)/360.0;
+  phi2 = (phi2*2*PI)/360.0;
+
+  static float l1 = 0.15; //length of upper linkage in m (measured from center of joint of 5 cm diameter)
+  static float l2 = 0.3; //length of lower linkage in m (measured from center of joint of 5 cm diameter)
+
+  ret[0] = fabs(-l1*cos((phi1 + phi2)/2.0) + sqrt(pow(l2,2) - pow(l1,2)*pow(sin((phi1 + phi2)/2.0),2))); //r
+  ret[1] = (phi1 - phi2)/2; //theta
+
+  ret[1] = (ret[1]*360)/(2.0*PI);
+
+  if(valid){
+    return ret;
+  }
+  else{
+    return NULL;
+  }
+}
+
+float *InverseKinematics(float r, float theta){
+  //function [phi1,phi2] = fcn(r,theta)
+
+  uint8_t valid = 1;
+  static float ret[2];
+
+  theta = (theta*2*PI)/360.0;
+
+  static float l1 = 0.15; //length of upper linkage in m (measured from center of joint of 5 cm diameter)
+  static float l2 = 0.3; //length of lower linkage in m (measured from center of joint of 5 cm diameter)
+
+  if (r == 0){r = 0.000001;}
+
+  //float complex cmp1;
+  float cmp1 = (pow(r,2) + pow(l1,2) - pow(l2,2))/(2.0*r*l1);
+
+  //float complex cmp2;
+  float cmp2 = (pow(r,2) + pow(l1,2) - pow(l2,2))/(2.0*r*l1);
+
+  ret[0] = fabs(PI - acos(cmp1) + theta); //phi1
+  ret[1] = fabs(PI - acos(cmp2) - theta); //phi2
+
+  ret[0] = (ret[0]*360)/(2.0*PI);
+  ret[1] = (ret[1]*360)/(2.0*PI);
+
+  if(valid){
+    return ret;
+  }
+  else{
+    return NULL;
+  }
+}
+
+/////////////////////////////////////////////////////////////////
 
 void SerialPortWidget::enableCommunicationSettings()
 {

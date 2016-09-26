@@ -16,7 +16,7 @@ extern "C" {
 
 void initCRC(uint8_t type);
 
-uint32_t crcCalc(const uint8_t* data, uint16_t startIndex, uint16_t length, uint8_t type);
+uint32_t crcCalc(uint8_t* data, uint16_t startIndex, uint16_t length, uint8_t type);
 
 #ifdef __cplusplus
 }

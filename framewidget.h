@@ -25,8 +25,10 @@
 
 #include "slider.h"
 
+#include <cmath>
 #include <CRC.h>
 #include <arrayFunctions.h>
+#include <QDoubleValidator>
 
 namespace Ui {
   class FrameWidget;
@@ -99,6 +101,14 @@ class FrameWidget : public QWidget
     void on_ControlCurrent_toggled(bool checked);
 
     void on_ControlPosition_toggled(bool checked);
+
+    void on_pushButton_clicked();
+
+    void on_SetGains_clicked();
+
+    void on_SetGainsM1_clicked();
+
+    void on_SetGainsM2_clicked();
 
 private:
     Ui::FrameWidget *ui;

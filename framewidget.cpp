@@ -23,6 +23,7 @@
 #include "hexstring.h"
 #include <queue>
 using std::queue;
+using std::pow;
 
 queue<int> txQueue; /* Declare a queue */
 
@@ -33,6 +34,8 @@ queue<int> txQueue; /* Declare a queue */
 #define POSITION_SET 22
 #define ZERO 8
 #define GAIN_SET 9
+#define GAIN_CHANGE_M1 10
+#define GAIN_CHANGE_M2 13
 
 FrameWidget::FrameWidget(QWidget *parent) :
   QWidget(parent),
@@ -61,13 +64,26 @@ FrameWidget::FrameWidget(QWidget *parent) :
 
   /////////////////////////////////////////////////////////////////
 
-  ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 0 (Leg)"), 0);
-  ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 1 (No Leg)"), 1);
+  ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 0 (No Leg)"), 0);
+  ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 1 (Leg)"), 1);
 
   ui->LegRadius->setValidator(new QIntValidator(10, 20));
   ui->LegAngle->setValidator(new QIntValidator(-1, 1));
   ui->M1Angle->setValidator(new QIntValidator(90, 162));
   ui->M2Angle->setValidator(new QIntValidator(90, 162));
+
+//  ui->PGain->setValidator(new QDoubleValidator(0.0, 0.5, 20, this));
+//  ui->IGain->setValidator(new QDoubleValidator(0.0, 9.766, 20, this));
+//  ui->DGain->setValidator(new QDoubleValidator(0.0, 0.008, 20, this));
+
+  //Conservative
+  ui->PGainM1->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
+  ui->IGainM1->setValidator(new QDoubleValidator(0.0, 0.0001, 20, this));
+  ui->DGainM1->setValidator(new QDoubleValidator(0.0, 0.00001, 20, this));
+
+  ui->PGainM2->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
+  ui->IGainM2->setValidator(new QDoubleValidator(0.0, 0.0001, 20, this));
+  ui->DGainM2->setValidator(new QDoubleValidator(0.0, 0.00001, 20, this));
 
   initCRC(0);
 
@@ -177,7 +193,7 @@ void FrameWidget::on_sendPushButton_clicked()
       enableSettings();
     } else {
       refreshRateTimer = new QTimer(this);
-
+        refreshRateTimer->setTimerType(Qt::PreciseTimer);
       connect(refreshRateTimer, SIGNAL(timeout()),
               this,             SLOT(on_refreshRateTimer_timeout()));
 
@@ -194,10 +210,21 @@ void FrameWidget::on_sendPushButton_clicked()
 
 void FrameWidget::on_refreshRateTimer_timeout()
 {
-//    if(ui->ControlCurrent->isChecked())
-//        //txQueue.push();
+    if(ui->M1Angle->text().toFloat() == 90)
+            ui->M1Angle->setText(QString::number(162));
+    else
+        ui->M1Angle->setText(QString::number(90));
+
+    if(ui->M2Angle->text().toFloat() == 90)
+            ui->M2Angle->setText(QString::number(162));
+    else
+        ui->M2Angle->setText(QString::number(90));
+
+
     if(ui->ControlPosition->isChecked())
         txQueue.push(POSITION_SET); //TODO make new opcode
+    else if(ui->ControlCurrent->isChecked())
+        txQueue.push(CURRENT_SET); //TODO make new opcode
     emit send(encode());
 }
 
@@ -235,6 +262,8 @@ union {
         uint8_t BYTE[4];
 } WORDtoBYTE;
 
+int32_t TempDATA;
+
 uint32_t CALC_CRC;
 
 float tempFloat = 0;
@@ -270,6 +299,21 @@ QByteArray FrameWidget::encode()
             SendPacket = TXPacketPTR;
             break;
         case CURRENT_SET:
+            if(ui->ManualCurrentcheckBox->isChecked()){
+                WORDtoBYTE.WORD = (ui->M1Current->text().toFloat())*(pow(2,15)/60);
+
+                TXPacket.M1C[0] = WORDtoBYTE.BYTE[0];
+                TXPacket.M1C[1] = WORDtoBYTE.BYTE[1];
+                TXPacket.M1C[2] = WORDtoBYTE.BYTE[2];
+                TXPacket.M1C[3] = WORDtoBYTE.BYTE[3];
+
+                WORDtoBYTE.WORD = (ui->M2Current->text().toFloat())*(pow(2,15)/60);
+
+                TXPacket.M2C[0] = WORDtoBYTE.BYTE[0];
+                TXPacket.M2C[1] = WORDtoBYTE.BYTE[1];
+                TXPacket.M2C[2] = WORDtoBYTE.BYTE[2];
+                TXPacket.M2C[3] = WORDtoBYTE.BYTE[3];
+            }
             TXPacket.OPCODE = txQueue.front();
             SendPacket = TXPacketPTR;
             break;
@@ -282,9 +326,8 @@ QByteArray FrameWidget::encode()
 
             if(ui->ManualAnglecheckBox->isChecked()){
                 if(ui->M1Angle->hasAcceptableInput()){
-                    WORDtoBYTE.WORD = 250*(ui->M1Angle->text().toFloat()/180 - 1);
+                    WORDtoBYTE.WORD = 4*250*(ui->M1Angle->text().toFloat()/180 - 1);
 
-                    //Change Little-Endian
                     TXPacket.M1P[0] = WORDtoBYTE.BYTE[0];
                     TXPacket.M1P[1] = WORDtoBYTE.BYTE[1];
                     TXPacket.M1P[2] = WORDtoBYTE.BYTE[2];
@@ -292,14 +335,29 @@ QByteArray FrameWidget::encode()
                 }
 
                 if(ui->M2Angle->hasAcceptableInput()){
-                    WORDtoBYTE.WORD = 250*(1 - ui->M2Angle->text().toFloat()/180);
+                    WORDtoBYTE.WORD = 4*250*(1 - ui->M2Angle->text().toFloat()/180);
 
-                    //Change Little-Endian
                     TXPacket.M2P[0] = WORDtoBYTE.BYTE[0];
                     TXPacket.M2P[1] = WORDtoBYTE.BYTE[1];
                     TXPacket.M2P[2] = WORDtoBYTE.BYTE[2];
                     TXPacket.M2P[3] = WORDtoBYTE.BYTE[3];
                 }
+            }
+
+            else if(ui->ManualCountcheckBox->isChecked()){
+                WORDtoBYTE.WORD = ui->M1Count->text().toFloat();
+
+                TXPacket.M1P[0] = WORDtoBYTE.BYTE[0];
+                TXPacket.M1P[1] = WORDtoBYTE.BYTE[1];
+                TXPacket.M1P[2] = WORDtoBYTE.BYTE[2];
+                TXPacket.M1P[3] = WORDtoBYTE.BYTE[3];
+
+                WORDtoBYTE.WORD = ui->M2Count->text().toFloat();
+
+                TXPacket.M2P[0] = WORDtoBYTE.BYTE[0];
+                TXPacket.M2P[1] = WORDtoBYTE.BYTE[1];
+                TXPacket.M2P[2] = WORDtoBYTE.BYTE[2];
+                TXPacket.M2P[3] = WORDtoBYTE.BYTE[3];
             }
 
             TXPacket.OPCODE = txQueue.front();
@@ -313,10 +371,61 @@ QByteArray FrameWidget::encode()
             TXPacket.OPCODE = txQueue.front();
             SendPacket = TXPacketPTR;
             break;
+        case GAIN_CHANGE_M1:
+            //Using current/position data slot for gains
+            WORDtoBYTE.WORD = ui->PGainM1->text().toFloat()*pow(2.0,32.0);
+            TXPacket.M1C[0] = WORDtoBYTE.BYTE[0];
+            TXPacket.M1C[1] = WORDtoBYTE.BYTE[1];
+            TXPacket.M1C[2] = WORDtoBYTE.BYTE[2];
+            TXPacket.M1C[3] = WORDtoBYTE.BYTE[3];
+
+            WORDtoBYTE.WORD = ui->IGainM1->text().toFloat()*(pow(2.0,41.0)/10000.0);
+            TXPacket.M1P[0] = WORDtoBYTE.BYTE[0];
+            TXPacket.M1P[1] = WORDtoBYTE.BYTE[1];
+            TXPacket.M1P[2] = WORDtoBYTE.BYTE[2];
+            TXPacket.M1P[3] = WORDtoBYTE.BYTE[3];
+
+            WORDtoBYTE.WORD = ui->DGainM1->text().toFloat()*pow(2.0,28.0)*10000;
+            TXPacket.M2C[0] = WORDtoBYTE.BYTE[0];
+            TXPacket.M2C[1] = WORDtoBYTE.BYTE[1];
+            TXPacket.M2C[2] = WORDtoBYTE.BYTE[2];
+            TXPacket.M2C[3] = WORDtoBYTE.BYTE[3];
+
+
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case GAIN_CHANGE_M2:
+            //Using current/position data slot for gains
+            WORDtoBYTE.WORD = ui->PGainM2->text().toFloat()*pow(2.0,32.0);
+            TXPacket.M1C[0] = WORDtoBYTE.BYTE[0];
+            TXPacket.M1C[1] = WORDtoBYTE.BYTE[1];
+            TXPacket.M1C[2] = WORDtoBYTE.BYTE[2];
+            TXPacket.M1C[3] = WORDtoBYTE.BYTE[3];
+
+            WORDtoBYTE.WORD = ui->IGainM2->text().toFloat()*(pow(2.0,41.0)/10000.0);
+            TXPacket.M1P[0] = WORDtoBYTE.BYTE[0];
+            TXPacket.M1P[1] = WORDtoBYTE.BYTE[1];
+            TXPacket.M1P[2] = WORDtoBYTE.BYTE[2];
+            TXPacket.M1P[3] = WORDtoBYTE.BYTE[3];
+
+            WORDtoBYTE.WORD = ui->DGainM2->text().toFloat()*pow(2.0,28.0)*10000;
+            TXPacket.M2C[0] = WORDtoBYTE.BYTE[0];
+            TXPacket.M2C[1] = WORDtoBYTE.BYTE[1];
+            TXPacket.M2C[2] = WORDtoBYTE.BYTE[2];
+            TXPacket.M2C[3] = WORDtoBYTE.BYTE[3];
+
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
         default:
             SendPacket = TXPacketPTR;
         }
+
         txQueue.pop();
+        if(txQueue.size()>10)
+            while(!txQueue.empty())
+                txQueue.pop();
 
         CALC_CRC = crcCalc(&TXPacket.OPCODE, 0, 18, 0); //Check entire data CRC
         WORDtoBYTE.HALFWORD = CALC_CRC;
@@ -506,4 +615,16 @@ void FrameWidget::on_ControlPosition_toggled(bool checked)
         ui->ControlCurrent->setDisabled(true);
     else
         ui->ControlCurrent->setEnabled(true);
+}
+
+void FrameWidget::on_SetGainsM1_clicked()
+{
+    if(ui->PGainM1->hasAcceptableInput() && ui->IGainM1->hasAcceptableInput() && ui->DGainM1->hasAcceptableInput())
+        txQueue.push(GAIN_CHANGE_M1);
+}
+
+void FrameWidget::on_SetGainsM2_clicked()
+{
+    if(ui->PGainM2->hasAcceptableInput() && ui->IGainM2->hasAcceptableInput() && ui->DGainM2->hasAcceptableInput())
+        txQueue.push(GAIN_CHANGE_M2);
 }

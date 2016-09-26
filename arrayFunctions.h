@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-uint8_t findBytes(uint8_t *array, uint8_t asize, uint8_t *bytes, uint8_t bsize, uint8_t returnindex);
+int8_t findBytes(uint8_t *array, uint8_t asize, uint8_t *bytes, uint8_t bsize, uint8_t returnindex);
 //Find first occurance of bytes within array (returns index or true/false):
 //uint8_t t;
 //t = findBytes(test3, 10, test2, 4, 0);

@@ -26,9 +26,11 @@
 #include <QtSerialPort/QSerialPortInfo>
 
 #include <QTimer>
+#include <QtEndian>
 
 #include <CRC.h>
 #include <arrayFunctions.h>
+#include <math.h>
 
 namespace Ui {
   class SerialPortWidget;
@@ -47,6 +49,7 @@ class SerialPortWidget : public QWidget
 
   signals:
     void read(QByteArray);
+    void readPlot(QByteArray);
     void communicationStart(bool);
 
   private slots:

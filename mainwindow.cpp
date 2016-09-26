@@ -98,7 +98,7 @@ void MainWindow::on_actionPlot_toggled(bool checked)
 
     ui->fromDeviceGridLayout->addWidget(plotWidget);
 
-    connect(ui->serialPortWidget, SIGNAL(read(QByteArray)),
+    connect(ui->serialPortWidget, SIGNAL(readPlot(QByteArray)),
             plotWidget,           SLOT(display(QByteArray)));
 
     plotWidget->show();
