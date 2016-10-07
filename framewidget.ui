@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>367</width>
-    <height>1056</height>
+    <height>1220</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -89,6 +89,9 @@
           <string>Bridge Enable</string>
          </property>
         </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="ConfigcomboBox"/>
        </item>
        <item>
         <widget class="QComboBox" name="GainSetcomboBox"/>
@@ -593,6 +596,28 @@
       </layout>
      </item>
     </layout>
+   </item>
+   <item row="23" column="0">
+    <widget class="Line" name="line_6">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="22" column="0">
+    <widget class="QPushButton" name="StartControl">
+     <property name="font">
+      <font>
+       <pointsize>16</pointsize>
+      </font>
+     </property>
+     <property name="acceptDrops">
+      <bool>false</bool>
+     </property>
+     <property name="text">
+      <string>ON-BOARD CONTROL</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

@@ -36,6 +36,12 @@ queue<int> txQueue; /* Declare a queue */
 #define GAIN_SET 9
 #define GAIN_CHANGE_M1 10
 #define GAIN_CHANGE_M2 13
+#define CONFIG_SET 16
+
+#define CONTROL_CURRENT_M1 40
+#define CONTROL_CURRENT_M2 41
+
+#define START_CONTROL 30
 
 FrameWidget::FrameWidget(QWidget *parent) :
   QWidget(parent),
@@ -67,23 +73,30 @@ FrameWidget::FrameWidget(QWidget *parent) :
   ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 0 (No Leg)"), 0);
   ui->GainSetcomboBox->addItem(QLatin1String("Gain Set 1 (Leg)"), 1);
 
+  ui->ConfigcomboBox->addItem(QLatin1String("Config Set 0 (Position)"), 0);
+  ui->ConfigcomboBox->addItem(QLatin1String("Config Set 1 (Current)"), 1);
+
   ui->LegRadius->setValidator(new QIntValidator(10, 20));
   ui->LegAngle->setValidator(new QIntValidator(-1, 1));
   ui->M1Angle->setValidator(new QIntValidator(90, 162));
   ui->M2Angle->setValidator(new QIntValidator(90, 162));
 
-//  ui->PGain->setValidator(new QDoubleValidator(0.0, 0.5, 20, this));
-//  ui->IGain->setValidator(new QDoubleValidator(0.0, 9.766, 20, this));
-//  ui->DGain->setValidator(new QDoubleValidator(0.0, 0.008, 20, this));
+  ui->PGainM1->setValidator(new QDoubleValidator(0.0, 0.5, 20, this));
+  ui->IGainM1->setValidator(new QDoubleValidator(0.0, 9.766, 20, this));
+  ui->DGainM1->setValidator(new QDoubleValidator(0.0, 0.008, 20, this));
+
+  ui->PGainM2->setValidator(new QDoubleValidator(0.0, 0.5, 20, this));
+  ui->IGainM2->setValidator(new QDoubleValidator(0.0, 9.766, 20, this));
+  ui->DGainM2->setValidator(new QDoubleValidator(0.0, 0.008, 20, this));
 
   //Conservative
-  ui->PGainM1->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
-  ui->IGainM1->setValidator(new QDoubleValidator(0.0, 0.0001, 20, this));
-  ui->DGainM1->setValidator(new QDoubleValidator(0.0, 0.00001, 20, this));
+//  ui->PGainM1->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
+//  ui->IGainM1->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
+//  ui->DGainM1->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
 
-  ui->PGainM2->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
-  ui->IGainM2->setValidator(new QDoubleValidator(0.0, 0.0001, 20, this));
-  ui->DGainM2->setValidator(new QDoubleValidator(0.0, 0.00001, 20, this));
+//  ui->PGainM2->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
+//  ui->IGainM2->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
+//  ui->DGainM2->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
 
   initCRC(0);
 
@@ -210,21 +223,24 @@ void FrameWidget::on_sendPushButton_clicked()
 
 void FrameWidget::on_refreshRateTimer_timeout()
 {
-    if(ui->M1Angle->text().toFloat() == 90)
-            ui->M1Angle->setText(QString::number(162));
-    else
-        ui->M1Angle->setText(QString::number(90));
 
-    if(ui->M2Angle->text().toFloat() == 90)
-            ui->M2Angle->setText(QString::number(162));
-    else
-        ui->M2Angle->setText(QString::number(90));
+    if(ui->ControlPosition->isChecked()){
 
+        if(ui->M1Angle->text().toFloat() == 90)
+                ui->M1Angle->setText(QString::number(162));
+        else
+            ui->M1Angle->setText(QString::number(90));
 
-    if(ui->ControlPosition->isChecked())
+        if(ui->M2Angle->text().toFloat() == 90)
+                ui->M2Angle->setText(QString::number(162));
+        else
+            ui->M2Angle->setText(QString::number(90));
+
         txQueue.push(POSITION_SET); //TODO make new opcode
-    else if(ui->ControlCurrent->isChecked())
+}
+    else if(ui->ControlCurrent->isChecked()){
         txQueue.push(CURRENT_SET); //TODO make new opcode
+    }
     emit send(encode());
 }
 
@@ -267,6 +283,8 @@ int32_t TempDATA;
 uint32_t CALC_CRC;
 
 float tempFloat = 0;
+
+QByteArray frameWriteData;
 
 QByteArray FrameWidget::encode()
 {
@@ -418,6 +436,13 @@ QByteArray FrameWidget::encode()
             TXPacket.OPCODE = txQueue.front();
             SendPacket = TXPacketPTR;
             break;
+        case CONFIG_SET:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
+            break;
+        case START_CONTROL:
+            TXPacket.OPCODE = txQueue.front();
+            SendPacket = TXPacketPTR;
         default:
             SendPacket = TXPacketPTR;
         }
@@ -627,4 +652,15 @@ void FrameWidget::on_SetGainsM2_clicked()
 {
     if(ui->PGainM2->hasAcceptableInput() && ui->IGainM2->hasAcceptableInput() && ui->DGainM2->hasAcceptableInput())
         txQueue.push(GAIN_CHANGE_M2);
+}
+
+void FrameWidget::on_StartControl_clicked()
+{
+    txQueue.push(START_CONTROL);
+}
+
+void FrameWidget::on_ConfigcomboBox_currentIndexChanged(int index)
+{
+    TXPacket.StatBIT_2 = ui->ConfigcomboBox->itemData(index).value<int>();
+    txQueue.push(CONFIG_SET);
 }

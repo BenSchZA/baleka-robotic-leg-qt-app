@@ -110,6 +110,12 @@ class FrameWidget : public QWidget
 
     void on_SetGainsM2_clicked();
 
+    void on_pushButton_toggled(bool checked);
+
+    void on_StartControl_clicked();
+
+    void on_ConfigcomboBox_currentIndexChanged(int index);
+
 private:
     Ui::FrameWidget *ui;
     QTimer *refreshRateTimer;

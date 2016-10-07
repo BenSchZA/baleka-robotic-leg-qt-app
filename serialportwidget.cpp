@@ -393,6 +393,7 @@ struct __attribute__((__packed__)) TXPacketStruct {
                 uint8_t BYTE[4];
         } FLOATtoBYTE;
 
+QByteArray frameReadData;
 QByteArray RXBuffer;
 QByteArray PlotBuffer;
 char *RXBufferArray;
@@ -464,7 +465,7 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
       memcpy(FLOATtoBYTE.BYTE, PCPacket.M1V, 4);
-      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(pow(2.0,17)/20000.0))*(1/8000.0)*60.0;
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(pow(2.0,17)/20000.0))*(1/2000.0)*60.0;
       M1V = QString::number(FLOATtoBYTE.FLOAT);
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
@@ -479,7 +480,7 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
       memcpy(FLOATtoBYTE.BYTE, PCPacket.M2V, 4);
-      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(pow(2.0,17)/20000.0))*(1/8000.0)*60.0;
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(pow(2.0,17)/20000.0))*(1/2000.0)*60.0;
       M2V = QString::number(FLOATtoBYTE.FLOAT);
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
@@ -492,7 +493,6 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
         else{
             CSVList << M1C << M1P << M1V << M2C << M2P << M2V;
         }
-
 
       CSVLog = CSVList.join(',');
       CSVLog.append("\n");
@@ -600,7 +600,7 @@ void SerialPortWidget::validateCommunicationSettings(void)
 void SerialPortWidget::on_pushButton_clicked()
 {
     //Set defaults
-    ui->baudRateComboBox->setCurrentIndex(16);
+    ui->baudRateComboBox->setCurrentIndex(19);
     ui->baudRateComboBox->update();
     ui->dataBitsComboBox->setCurrentIndex(3);
     ui->dataBitsComboBox->update();
