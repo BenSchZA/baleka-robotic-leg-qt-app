@@ -94,27 +94,21 @@ class FrameWidget : public QWidget
 
     void on_ManualAnglecheckBox_stateChanged(int arg1);
 
-    void on_checkBox_toggled(bool checked);
-
-    void on_checkBox_2_toggled(bool checked);
-
     void on_ControlCurrent_toggled(bool checked);
 
     void on_ControlPosition_toggled(bool checked);
-
-    void on_pushButton_clicked();
-
-    void on_SetGains_clicked();
 
     void on_SetGainsM1_clicked();
 
     void on_SetGainsM2_clicked();
 
-    void on_pushButton_toggled(bool checked);
-
-    void on_StartControl_clicked();
-
     void on_ConfigcomboBox_currentIndexChanged(int index);
+
+    void on_StartControlcheckBox_clicked(bool checked);
+
+    void on_Trigger1pushButton_toggled(bool checked);
+
+    void on_SetuppushButton_clicked();
 
 private:
     Ui::FrameWidget *ui;

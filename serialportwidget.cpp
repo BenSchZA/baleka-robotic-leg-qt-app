@@ -355,13 +355,15 @@ struct __attribute__((__packed__)) TXPacketStruct {
                 uint8_t M2P[4];
                 uint8_t M2V[4];
 
-                uint8_t ACCX[2];
-                uint8_t ACCY[2];
-                uint8_t ACCZ[2];
-                uint8_t GYRX[2];
-                uint8_t GYRY[2];
-                uint8_t GYRZ[2];
-                uint8_t TEMP;
+//                uint8_t ACCX[2];
+//                uint8_t ACCY[2];
+//                uint8_t ACCZ[2];
+//                uint8_t GYRX[2];
+//                uint8_t GYRY[2];
+//                uint8_t GYRZ[2];
+//                uint8_t TEMP;
+                uint8_t MISC[16];
+
                 uint8_t StatBIT_1 : 1;
                 uint8_t StatBIT_2 : 1;
                 uint8_t StatBIT_3 : 1;
@@ -415,6 +417,15 @@ QString M2C;
 QString M2P;
 QString M2V;
 
+QString I_cmd_0;
+QString I_cmd_1;
+QString f_r;
+QString f_theta;
+
+float *RET;
+QString r;
+QString theta;
+
 uint32_t test = 100;
 
 
@@ -438,7 +449,7 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
       WORDtoBYTE.BYTE[1] = PCPacket.CRCCheck[0];
       WORDtoBYTE.BYTE[0] = PCPacket.CRCCheck[1];
 
-      CALC_CRC_2 = crcCalc(PCPacketPTR, 2, 34, 0); //Check entire data CRC
+      CALC_CRC_2 = crcCalc(PCPacketPTR, 2, 37, 0); //Check entire data CRC
 
 //      if(WORDtoBYTE.HALFWORD==CALC_CRC_2) {
 //        run = 1;
@@ -454,13 +465,15 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
   //Temporary without CRC check
   if(PCPacket.STOP[0] == 0x5D){
 
+      //Motor log data
+
       memcpy(FLOATtoBYTE.BYTE, PCPacket.M1C, 2);
       FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT16/(pow(2.0,13)/60.0);
       M1C = QString::number(FLOATtoBYTE.FLOAT);
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
       memcpy(FLOATtoBYTE.BYTE, PCPacket.M1P, 4);
-      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(4*250.0) + 1)*180.0;
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(4*250.0) - 1)*(-180.0);
       M1P = QString::number(FLOATtoBYTE.FLOAT);
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
@@ -475,7 +488,7 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
       memcpy(FLOATtoBYTE.BYTE, PCPacket.M2P, 4);
-      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(4*250.0) - 1)*(-180.0);
+      FLOATtoBYTE.FLOAT = (FLOATtoBYTE.FLOAT32/(4*250.0) + 1)*180.0;
       M2P = QString::number(FLOATtoBYTE.FLOAT);
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
@@ -484,6 +497,33 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
       M2V = QString::number(FLOATtoBYTE.FLOAT);
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
+      //Control log data
+      memcpy(FLOATtoBYTE.BYTE, PCPacket.MISC, 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      I_cmd_0 = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[4], 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      I_cmd_1 = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[8], 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      f_r = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[12], 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      f_theta = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      RET = ForwardKinematics(M1P.toFloat(), M2P.toFloat());
+      r = QString::number(RET[0]);
+      PlotBuffer.append((const char *)&RET[0], 4);
+      theta = QString::number(RET[1]);
+      PlotBuffer.append((const char *)&RET[1], 4);
+
       CSVList.clear();
 
         if(run==0){
@@ -491,7 +531,7 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
             run=1;
         }
         else{
-            CSVList << M1C << M1P << M1V << M2C << M2P << M2V;
+            CSVList << M1C << M1P << M1V << M2C << M2P << M2V << I_cmd_0 << I_cmd_1 << f_r << f_theta << r << theta;
         }
 
       CSVLog = CSVList.join(',');

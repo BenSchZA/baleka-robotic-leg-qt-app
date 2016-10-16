@@ -27,6 +27,8 @@ using std::pow;
 
 queue<int> txQueue; /* Declare a queue */
 
+#define PAYLOAD_TX 63
+
 #define KILL 0
 #define WRITE 1
 #define BRIDGE 2
@@ -42,6 +44,7 @@ queue<int> txQueue; /* Declare a queue */
 #define CONTROL_CURRENT_M2 41
 
 #define START_CONTROL 30
+#define TRIGGER_ONESHOT 31
 
 FrameWidget::FrameWidget(QWidget *parent) :
   QWidget(parent),
@@ -88,6 +91,10 @@ FrameWidget::FrameWidget(QWidget *parent) :
   ui->PGainM2->setValidator(new QDoubleValidator(0.0, 0.5, 20, this));
   ui->IGainM2->setValidator(new QDoubleValidator(0.0, 9.766, 20, this));
   ui->DGainM2->setValidator(new QDoubleValidator(0.0, 0.008, 20, this));
+
+  ui->Kr->setValidator(new QDoubleValidator(0.0, 1.0, 20, this));
+  ui->Ktheta->setValidator(new QDoubleValidator(0.0, 1.0, 20, this));
+  ui->Ki->setValidator(new QDoubleValidator(0.0, 2.0, 20, this));
 
   //Conservative
 //  ui->PGainM1->setValidator(new QDoubleValidator(0.0, 0.001, 20, this));
@@ -255,6 +262,21 @@ struct __attribute__((__packed__)) TXPacketStruct {
         uint8_t M1P[4];
         uint8_t M2P[4];
 
+        float r_cmd;
+        float theta_cmd;
+
+        float k_r;
+        float k_theta;
+        float ki_r;
+        float ki_theta;
+
+        float kr_s;
+        float kr_d;
+        float ktheta_s;
+        float ktheta_d;
+
+        float k_i;
+
         uint8_t StatBIT_1 : 1;
         uint8_t StatBIT_2 : 1;
         uint8_t StatBIT_3 : 1;
@@ -263,6 +285,8 @@ struct __attribute__((__packed__)) TXPacketStruct {
         uint8_t StatBIT_6 : 1;
         uint8_t StatBIT_7 : 1;
         uint8_t StatBIT_8 : 1;
+
+        uint8_t TRIGGER;
 
         uint8_t CRCCheck[2];
 
@@ -344,7 +368,7 @@ QByteArray FrameWidget::encode()
 
             if(ui->ManualAnglecheckBox->isChecked()){
                 if(ui->M1Angle->hasAcceptableInput()){
-                    WORDtoBYTE.WORD = 4*250*(ui->M1Angle->text().toFloat()/180 - 1);
+                    WORDtoBYTE.WORD = 4*250*(1 - ui->M2Angle->text().toFloat()/180);
 
                     TXPacket.M1P[0] = WORDtoBYTE.BYTE[0];
                     TXPacket.M1P[1] = WORDtoBYTE.BYTE[1];
@@ -353,7 +377,7 @@ QByteArray FrameWidget::encode()
                 }
 
                 if(ui->M2Angle->hasAcceptableInput()){
-                    WORDtoBYTE.WORD = 4*250*(1 - ui->M2Angle->text().toFloat()/180);
+                    WORDtoBYTE.WORD = 4*250*(ui->M1Angle->text().toFloat()/180 - 1);
 
                     TXPacket.M2P[0] = WORDtoBYTE.BYTE[0];
                     TXPacket.M2P[1] = WORDtoBYTE.BYTE[1];
@@ -442,7 +466,31 @@ QByteArray FrameWidget::encode()
             break;
         case START_CONTROL:
             TXPacket.OPCODE = txQueue.front();
+            if(ui->Kr->hasAcceptableInput() && ui->Ktheta->hasAcceptableInput()){
+                TXPacket.k_r = ui->Kr->text().toFloat();
+                TXPacket.k_theta = ui->Ktheta->text().toFloat();
+            }
+            else{
+                TXPacket.k_r = 0;
+                TXPacket.k_theta = 0;
+            }
+            TXPacket.r_cmd = ui->R->text().toFloat();
+            TXPacket.theta_cmd = ui->Theta->text().toFloat();
+            TXPacket.kr_s = ui->Kr_s->text().toFloat();
+            TXPacket.kr_d = ui->Kr_d->text().toFloat();
+            TXPacket.ki_r = ui->Ki_r->text().toFloat();
+            TXPacket.ki_theta = ui->Ki_theta->text().toFloat();
+            TXPacket.ktheta_s = ui->Ktheta_s->text().toFloat();
+            TXPacket.ktheta_d = ui->Ktheta_d->text().toFloat();
+            TXPacket.k_i = ui->Ki->text().toFloat();
+
             SendPacket = TXPacketPTR;
+            break;
+        case TRIGGER_ONESHOT:
+            TXPacket.OPCODE = txQueue.front();
+
+            SendPacket = TXPacketPTR;
+            break;
         default:
             SendPacket = TXPacketPTR;
         }
@@ -452,7 +500,7 @@ QByteArray FrameWidget::encode()
             while(!txQueue.empty())
                 txQueue.pop();
 
-        CALC_CRC = crcCalc(&TXPacket.OPCODE, 0, 18, 0); //Check entire data CRC
+        CALC_CRC = crcCalc(&TXPacket.OPCODE, 0, PAYLOAD_TX, 0); //Check entire data CRC
         WORDtoBYTE.HALFWORD = CALC_CRC;
 
         TXPacket.CRCCheck[0] = WORDtoBYTE.BYTE[1];
@@ -654,13 +702,35 @@ void FrameWidget::on_SetGainsM2_clicked()
         txQueue.push(GAIN_CHANGE_M2);
 }
 
-void FrameWidget::on_StartControl_clicked()
-{
-    txQueue.push(START_CONTROL);
-}
-
 void FrameWidget::on_ConfigcomboBox_currentIndexChanged(int index)
 {
     TXPacket.StatBIT_2 = ui->ConfigcomboBox->itemData(index).value<int>();
     txQueue.push(CONFIG_SET);
+}
+
+void FrameWidget::on_StartControlcheckBox_clicked(bool checked)
+{
+    txQueue.push(START_CONTROL);
+    if(checked)
+        TXPacket.StatBIT_3 = 1;
+    else
+        TXPacket.StatBIT_3 = 0;
+}
+
+void FrameWidget::on_Trigger1pushButton_toggled(bool checked)
+{
+    txQueue.push(TRIGGER_ONESHOT);
+    if(checked)
+        TXPacket.TRIGGER = 1;
+    else
+        TXPacket.TRIGGER = 0;
+}
+
+void FrameWidget::on_SetuppushButton_clicked()
+{
+    txQueue.push(WRITE);
+    TXPacket.StatBIT_2 = 1;
+    txQueue.push(CONFIG_SET);
+    txQueue.push(CURRENT_SET);
+    txQueue.push(BRIDGE);
 }

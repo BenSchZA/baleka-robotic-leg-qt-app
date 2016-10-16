@@ -7,35 +7,35 @@
     <x>0</x>
     <y>0</y>
     <width>367</width>
-    <height>1220</height>
+    <height>1466</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="21" column="0">
+   <item row="30" column="0">
     <widget class="Line" name="line_5">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
-   <item row="14" column="0">
+   <item row="23" column="0">
     <widget class="Line" name="line_4">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
-   <item row="20" column="0">
+   <item row="29" column="0">
     <widget class="QPushButton" name="SetGainsM2">
      <property name="text">
       <string>Set Gains M2</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
+   <item row="5" column="0">
     <widget class="Line" name="line_2">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -107,7 +107,7 @@
      </item>
     </layout>
    </item>
-   <item row="6" column="0">
+   <item row="13" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -219,14 +219,14 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="0">
+   <item row="15" column="0">
     <widget class="QCheckBox" name="ManualPositioncheckBox">
      <property name="text">
       <string>Manual Position</string>
      </property>
     </widget>
    </item>
-   <item row="16" column="0">
+   <item row="25" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_5">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_8">
@@ -457,49 +457,49 @@
      </item>
     </layout>
    </item>
-   <item row="11" column="0">
+   <item row="20" column="0">
     <widget class="Line" name="line_3">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
-   <item row="9" column="0">
+   <item row="16" column="0">
     <widget class="QCheckBox" name="ManualAnglecheckBox">
      <property name="text">
       <string>Manual Angle</string>
      </property>
     </widget>
    </item>
-   <item row="12" column="0">
+   <item row="21" column="0">
     <widget class="QCheckBox" name="ControlCurrent">
      <property name="text">
       <string>Control Current</string>
      </property>
     </widget>
    </item>
-   <item row="13" column="0">
+   <item row="22" column="0">
     <widget class="QCheckBox" name="ControlPosition">
      <property name="text">
       <string>Control Position</string>
      </property>
     </widget>
    </item>
-   <item row="7" column="0">
+   <item row="14" column="0">
     <widget class="QCheckBox" name="ManualCurrentcheckBox">
      <property name="text">
       <string>Manual Current</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="0">
+   <item row="17" column="0">
     <widget class="QCheckBox" name="ManualCountcheckBox">
      <property name="text">
       <string>Manual Count</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="0">
+   <item row="12" column="0">
     <widget class="QLabel" name="label_22">
      <property name="font">
       <font>
@@ -511,7 +511,14 @@
      </property>
     </widget>
    </item>
-   <item row="15" column="0">
+   <item row="11" column="0">
+    <widget class="Line" name="line_6">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="24" column="0">
     <widget class="QLabel" name="label_21">
      <property name="font">
       <font>
@@ -519,7 +526,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Control Loop Gains</string>
+      <string>Set Loop Gains</string>
      </property>
     </widget>
    </item>
@@ -535,14 +542,14 @@
      </property>
     </widget>
    </item>
-   <item row="18" column="0">
+   <item row="27" column="0">
     <widget class="QPushButton" name="SetGainsM1">
      <property name="text">
       <string>Set Gains M1</string>
      </property>
     </widget>
    </item>
-   <item row="19" column="0">
+   <item row="28" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -597,25 +604,217 @@
      </item>
     </layout>
    </item>
-   <item row="23" column="0">
-    <widget class="Line" name="line_6">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="8" column="0">
+    <widget class="QCheckBox" name="StartControlcheckBox">
+     <property name="text">
+      <string>On-board control</string>
      </property>
     </widget>
    </item>
-   <item row="22" column="0">
-    <widget class="QPushButton" name="StartControl">
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_27">
      <property name="font">
       <font>
        <pointsize>16</pointsize>
       </font>
      </property>
-     <property name="acceptDrops">
-      <bool>false</bool>
+     <property name="text">
+      <string>On-board Control</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_7">
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_13">
+       <item>
+        <widget class="QLabel" name="label_38">
+         <property name="text">
+          <string>R</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_37">
+         <property name="text">
+          <string>Theta</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_29">
+         <property name="text">
+          <string>Kr</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_28">
+         <property name="text">
+          <string>Ktheta</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_35">
+         <property name="text">
+          <string>Ki_r</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_36">
+         <property name="text">
+          <string>Ki_theta</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_30">
+         <property name="text">
+          <string>Kr_s</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_31">
+         <property name="text">
+          <string>Kr_d</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_32">
+         <property name="text">
+          <string>Ktheta_s</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_33">
+         <property name="text">
+          <string>Ktheta_d</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_34">
+         <property name="text">
+          <string>Ki</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_8">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_14">
+       <item>
+        <widget class="QLineEdit" name="R"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Theta"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Kr"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Ktheta"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Ki_r"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Ki_theta"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Kr_s"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Kr_d"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Ktheta_s"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Ktheta_d"/>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="Ki"/>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item row="9" column="0">
+    <widget class="QPushButton" name="Trigger1pushButton">
+     <property name="text">
+      <string>Trigger 1</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QPushButton" name="SetuppushButton">
+     <property name="baseSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="palette">
+      <palette>
+       <active>
+        <colorrole role="Button">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </active>
+       <inactive>
+        <colorrole role="Button">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </inactive>
+       <disabled>
+        <colorrole role="Button">
+         <brush brushstyle="SolidPattern">
+          <color alpha="255">
+           <red>255</red>
+           <green>0</green>
+           <blue>0</blue>
+          </color>
+         </brush>
+        </colorrole>
+       </disabled>
+      </palette>
      </property>
      <property name="text">
-      <string>ON-BOARD CONTROL</string>
+      <string>LAUNCH SEQUENCE</string>
      </property>
     </widget>
    </item>
