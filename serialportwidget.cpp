@@ -36,6 +36,9 @@ float *ForwardKinematics(float phi1, float phi2);
 float *InverseKinematics(float r, float theta);
 #define PI 3.141592653f
 
+#define PAYLOAD_RX 21
+#define PAYLOAD_MISC 32
+
 #define REFRESH_RATE_MS 5
 
 Q_DECLARE_METATYPE(QSerialPort::DataBits)
@@ -362,7 +365,7 @@ struct __attribute__((__packed__)) TXPacketStruct {
 //                uint8_t GYRY[2];
 //                uint8_t GYRZ[2];
 //                uint8_t TEMP;
-                uint8_t MISC[16];
+                uint8_t MISC[PAYLOAD_MISC];
 
                 uint8_t StatBIT_1 : 1;
                 uint8_t StatBIT_2 : 1;
@@ -420,7 +423,11 @@ QString M2V;
 QString I_cmd_0;
 QString I_cmd_1;
 QString f_r;
-QString f_theta;
+QString f_s;
+QString r_fbk;
+QString s_fbk;
+QString r_d_fbk;
+QString s_d_fbk;
 
 float *RET;
 QString r;
@@ -449,7 +456,7 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
       WORDtoBYTE.BYTE[1] = PCPacket.CRCCheck[0];
       WORDtoBYTE.BYTE[0] = PCPacket.CRCCheck[1];
 
-      CALC_CRC_2 = crcCalc(PCPacketPTR, 2, 37, 0); //Check entire data CRC
+      CALC_CRC_2 = crcCalc(PCPacketPTR, 2, PAYLOAD_RX + PAYLOAD_MISC, 0); //Check entire data CRC
 
 //      if(WORDtoBYTE.HALFWORD==CALC_CRC_2) {
 //        run = 1;
@@ -515,14 +522,34 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
 
       memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[12], 4);
       //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
-      f_theta = QString::number(FLOATtoBYTE.FLOAT);
+      f_s = QString::number(FLOATtoBYTE.FLOAT);
       PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
 
-      RET = ForwardKinematics(M1P.toFloat(), M2P.toFloat());
-      r = QString::number(RET[0]);
-      PlotBuffer.append((const char *)&RET[0], 4);
-      theta = QString::number(RET[1]);
-      PlotBuffer.append((const char *)&RET[1], 4);
+      memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[16], 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      r_fbk = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[20], 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      s_fbk = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[24], 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      r_d_fbk = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+      memcpy(FLOATtoBYTE.BYTE, &PCPacket.MISC[28], 4);
+      //FLOATtoBYTE.FLOAT = FLOATtoBYTE.FLOAT32;
+      s_d_fbk = QString::number(FLOATtoBYTE.FLOAT);
+      PlotBuffer.append((const char *)&FLOATtoBYTE.FLOAT, 4);
+
+//      RET = ForwardKinematics(M1P.toFloat(), M2P.toFloat());
+//      r = QString::number(RET[0]);
+//      PlotBuffer.append((const char *)&RET[0], 4);
+//      theta = QString::number(RET[1]);
+//      PlotBuffer.append((const char *)&RET[1], 4);
 
       CSVList.clear();
 
@@ -531,7 +558,7 @@ void SerialPortWidget::on_refreshRateTimer_timeout()
             run=1;
         }
         else{
-            CSVList << M1C << M1P << M1V << M2C << M2P << M2V << I_cmd_0 << I_cmd_1 << f_r << f_theta << r << theta;
+            CSVList << M1C << M1P << M1V << M2C << M2P << M2V << I_cmd_0 << I_cmd_1 << f_r << f_s << r_fbk << s_fbk << r_d_fbk << s_d_fbk;
         }
 
       CSVLog = CSVList.join(',');

@@ -263,17 +263,17 @@ struct __attribute__((__packed__)) TXPacketStruct {
         uint8_t M2P[4];
 
         float r_cmd;
-        float theta_cmd;
+        float s_cmd;
 
         float k_r;
-        float k_theta;
+        float k_s;
         float ki_r;
-        float ki_theta;
+        float ki_s;
 
         float kr_s;
         float kr_d;
-        float ktheta_s;
-        float ktheta_d;
+        float ks_s;
+        float ks_d;
 
         float k_i;
 
@@ -468,20 +468,20 @@ QByteArray FrameWidget::encode()
             TXPacket.OPCODE = txQueue.front();
             if(ui->Kr->hasAcceptableInput() && ui->Ktheta->hasAcceptableInput()){
                 TXPacket.k_r = ui->Kr->text().toFloat();
-                TXPacket.k_theta = ui->Ktheta->text().toFloat();
+                TXPacket.k_s = ui->Ktheta->text().toFloat();
             }
             else{
                 TXPacket.k_r = 0;
-                TXPacket.k_theta = 0;
+                TXPacket.k_s = 0;
             }
             TXPacket.r_cmd = ui->R->text().toFloat();
-            TXPacket.theta_cmd = ui->Theta->text().toFloat();
+            TXPacket.s_cmd = ui->Theta->text().toFloat();
             TXPacket.kr_s = ui->Kr_s->text().toFloat();
             TXPacket.kr_d = ui->Kr_d->text().toFloat();
             TXPacket.ki_r = ui->Ki_r->text().toFloat();
-            TXPacket.ki_theta = ui->Ki_theta->text().toFloat();
-            TXPacket.ktheta_s = ui->Ktheta_s->text().toFloat();
-            TXPacket.ktheta_d = ui->Ktheta_d->text().toFloat();
+            TXPacket.ki_s = ui->Ki_theta->text().toFloat();
+            TXPacket.ks_s = ui->Ktheta_s->text().toFloat();
+            TXPacket.ks_d = ui->Ktheta_d->text().toFloat();
             TXPacket.k_i = ui->Ki->text().toFloat();
 
             SendPacket = TXPacketPTR;
